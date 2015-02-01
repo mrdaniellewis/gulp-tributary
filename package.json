@@ -1,0 +1,24 @@
+{
+	"name": "gulp-include",
+	"version": "1.0.0",
+	"description": "Gulp plugin to insert one file into another",
+	"main": "./index.js",
+	"scripts": {
+		"test": "mocha"
+	},
+	"dependencies": {
+		"through2": "^0.6.3",
+		"gulp-util": "^3.0.1",
+		"promise-util": "^1.0.0",
+		"mime-types": "^2.0.7",
+		"debug": "^2.1.1",
+		"tributary": "^1.0.0",
+		"stream-collect": "^1.0.1"
+	},
+	"devDependencies": {
+		"mocha": "^2.1.0",
+		"vinyl": "^0.4.6"
+	},
+	"author": "Daniel Lewis",
+	"license": "ISC"
+}
