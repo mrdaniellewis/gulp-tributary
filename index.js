@@ -1,26 +1,8 @@
-/**
- * Yet another gulp plugin for including files
- *
- * Finds placeholders in a file and replaces them with another file
- *
- *  The difference between this and other similar plugins is it takes a
- */
-
-// @todo error handling
-// @todo separate out file insertion
-// @todo cleaner way of matching placeholder
-// @todo remove used up streams
-
-
 /* jshint node:true */
 "use strict";
 
 var through = require('through2');
-var gutil = require('gulp-util');
-var promiseUtil = require('promise-util');
 var Promise = require('promise-polyfill');
-var stream = require('stream');
-var util = require('util');
 var mime = require('mime-types');
 var Tributary = require('tributary');
 var collect = require('stream-collect');
@@ -29,8 +11,9 @@ var findFile = require('./lib/find-file.js');
 
 var debug = require('debug')('gulp-tributary');
 
-var PLUGIN_NAME = 'gulp-include';
+var PLUGIN_NAME = 'gulp-tributary';
 
+// Default placeholders based on the mimetype of the document
 var placeholders = {
     'text/plain': ['<!-- include ',' -->'],
     'text/html': ['<!-- include ',' -->'],
@@ -46,7 +29,7 @@ var placeholders = {
 /**
  *  
  *  @param {stream.Readable} includes Object stream of vinyl files to include
- *  @param {String} [options.placeholder] The placeholder template to use
+ *  @param {String[]} [options.placeholder] The placeholder template to use
  *  @param {String} [options.mediaType] The media type used to choose the placeholder
  *  @returns {stream.Transform}
  */
@@ -54,7 +37,7 @@ function include( includes, options ) {
     
     options = options || {};
     var forceMediaType = options.mediaType;
-    var errorOnNotFound = options.errorOnNotFound !== false;
+    var ignoreMissingFiles = options.ignoreMissingFiles === true;
     var files;
     if (includes ) {
         files = collect(includes);
@@ -76,13 +59,12 @@ function include( includes, options ) {
 
                 debug( 'found file', file );
                 if ( file === null ) {
-                    if ( errorOnNotFound ) {
-                        var error = new Error( filename + ' not found' );
-                        error.code = 'ENOENT';
-                        cb(error);
-                        return;
+                    if ( !ignoreMissingFiles ) {
+                        var error = new Error( PLUGIN_NAME + ': ' + filename + ' not found' );
+                        stream.emit( 'error', error );
                     }
                     cb();
+                    return;
                 }
                 cb( file.pipe(through()) );
             } );
@@ -99,7 +81,7 @@ function include( includes, options ) {
         return injector;
     }
 
-    return through.obj( function(file, enc, cb) {
+    var stream = through.obj( function(file, enc, cb) {
 
         if ( file.isNull() ) {
             cb(null, file);
@@ -137,6 +119,8 @@ function include( includes, options ) {
         cb(null, file);
 
     } );
+
+    return stream;
 
 }
 

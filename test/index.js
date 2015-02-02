@@ -1,57 +1,58 @@
-/* jshint node:true */
-/* global describe:false, it:false */
-
+/* jshint node:true, mocha: true */
 "use strict";
 
-var include = require('../');
-var assert = require('assert');
+var fs = require('fs');
+var path = require('path');
+
+var tributary = require('../');
 var File = require('vinyl');
 var through = require('through2');
+var collect = require('stream-collect');
+var expect = require('expect');
 
-describe( 'gulp-include', function() {
+describe( 'gulp-tributary', function() {
 
 	describe( 'null file', function() {
 
-		it( 'should return a null file', function(done) {
+		it( 'should return a null file', function() {
 
-			var fakeFile = new File();
-			var includer = include();
-			includer.write(fakeFile);
+			var file = new File();
+			var includer = tributary();
+			includer.end(file);
 
-			// wait for the file to come back out
-			includer.once('data', function(file) {
-				// make sure it came out the same way it went in
-				assert(file.isNull());
-				done();
-			});
+			return collect(includer)
+				.then( function(data) {
+					var file = data[0];
+					expect( file.isNull() ).toBe( true );
+				} );
+
 		});
 		
 	});
 
 	describe( 'in buffer mode', function() {
 
-		it( 'should return the original file', function(done) {
+		it( 'should return the original file', function() {
 
-			var fakeFile = new File( {
+			var file = new File( {
 				contents: new Buffer('abufferwiththiscontent')
 			} );
 
-			var includer = include();
-			includer.write(fakeFile);
+			var includer = tributary();
+			includer.end(file);
 
-			// wait for the file to come back out
-			includer.once('data', function(file) {
-				// make sure it came out the same way it went in
-				assert(file.isBuffer());
-				// check the contents
-				assert.equal(file.contents.toString('utf8'), 'abufferwiththiscontent');
-				done();
-			});
+			return collect(includer)
+				.then( function(data) {
+					var file = data[0];
+
+					expect( file.isBuffer() ).toBe(true);
+					expect( file.contents.toString('utf8') ).toBe( 'abufferwiththiscontent' );
+				} );
 		});
 
-		it( 'should insert a file', function(done) {
+		it( 'should insert a file', function() {
 
-			var fakeFile = new File( {
+			var file = new File( {
 				contents: new Buffer('some content <!-- include "include.txt" --> some more content')
 			} );
 
@@ -61,84 +62,268 @@ describe( 'gulp-include', function() {
 				contents: new Buffer('replaced content')
 			} );
 
-			var includeStream = through( {objectMode:true});
-
-			var includer = include( includeStream );
+			var includeStream = through( {objectMode:true} );
 			includeStream.end(includeFile);
-			includer.end(fakeFile);
 
-			// wait for the file to come back out
-			includer.once('data', function(file) {
-				// make sure it came out the same way it went in
-				assert(file.isBuffer());
-				// check the contents
-				assert.equal(file.contents.toString('utf8'), 'some content replaced content some more content');
-				done();
-			});
+			var includer = tributary( includeStream );
+			includer.end(file);
+
+			return collect(includer)
+				.then( function(data) {
+					var file = data[0];
+
+					expect( file.isBuffer() ).toBe(true);
+					expect( file.contents.toString('utf8') )
+						.toBe( 'some content replaced content some more content' );
+				} );
+
 		});
 		
 	});
 
 	describe( 'in stream mode', function() {
 
-		it( 'should return the original file', function(done) {
+		it( 'should return the original file', function() {
 
-			var file = through();
+			var stream = through();
+			stream.end('astreamwithcontents');
 			var fakeFile = new File( {
-				contents: file
+				contents: stream
 			} );
 
-			var includer = include();
-			includer.write(fakeFile);
+			var includer = tributary();
+			includer.end(fakeFile);
 
-			// wait for the file to come back out
-			includer.once('data', function(output) {
-				// make sure it came out the same way it went in
-				assert(output.isStream());
-				// check the contents
-				//assert.equal(output.contents,file);
-				done();
-			});
+			return collect(includer)
+				.then( function(data) {
+					var file = data[0];
+
+					expect( file.isStream() ).toBe( true );
+
+					return collect(file.contents);
+				} )
+				.then( function(data) {
+					expect( data.toString('utf8') ).toBe( 'astreamwithcontents' );
+				} );
+
 		});
 
-		it( 'should insert a file' );
+		it( 'should insert a file', function() {
+
+			var stream = through();
+			stream.end('some content <!-- include "include.txt" --> some more content');
+			var fakeFile = new File( {
+				contents: stream
+			} );
+
+			var includeFile = new File( {
+				path: '/include.txt',
+				base: '/',
+				contents: new Buffer('replaced content')
+			} );
+
+			var includeStream = through( {objectMode:true});
+			includeStream.end(includeFile);
+
+			var includer = tributary(includeStream);
+			includer.end(fakeFile);
+
+			return collect(includer)
+				.then( function(data) {
+					var file = data[0];
+
+					expect( file.isStream() ).toBe( true );
+
+					return collect(file.contents);
+				} )
+				.then( function(data) {
+					expect( data.toString('utf8') ).toBe( 'some content replaced content some more content' );
+				} );
+
+		} );
 
 	} );
 
 	describe( 'media types', function() {
 
-		// HTML
-		// XML
-		// JS
-		// CSS
-		// LESS
-		// SASS
-		// Custom
+		
+		function runTest( extension, start, end, done ) {
 
-	} );
+			var file = new File( {
+				contents: new Buffer( 
+					'some content ' + start + '"include.txt"' + end + ' some more content'
+				),
+				path: 'include.' + extension 
+			} );
 
-	// Check media types
+			var includeFile = new File( {
+				path: '/include.txt',
+				base: '/',
+				contents: new Buffer('replaced content')
+			} );
 
-	describe( 'a more practical example', function() {
+			var includeStream = through( {objectMode:true} );
+			includeStream.end(includeFile);
 
-		it( 'should add my string templates to my JS modele', function() {
+			var includer = tributary( includeStream );
+			includer.end(file);
 
-			var output = fs.readFileSync( path.resolve( __dirname, 'example', 'output.js' ), { encoding: 'utf8' } );
+			return collect(includer)
+				.then( function(data) {
+					var file = data[0];
 
-			var source = gulp.src( './example/templates/*.*.' )
-				.pipe( /* JS escape */ );
-			
-			gulp.src( './example/test.js' )
-				.pipe( includer(source) )
-				.once( 'data', function(vinyl) {
+					expect( file.isBuffer() ).toBe(true);
+					expect( file.contents.toString('utf8') )
+						.toBe( 'some content replaced content some more content' );
+				} )
+				.then( done );
 
-					collect( vinyl.pipe() )
-						.then( function(data) {
-							expect(data).toBe(output);
-						} );
+		}
+
+		[	['html', 'htm', '<!-- include ', ' -->'],
+			['JavaScript', 'js', '/* include ', ' */'],
+			['CSS', 'css', '/* include ', ' */'],
+			['LESS', 'less', '/* include ', ' */'],
+			['SASS', 'sass', '/* include ', ' */'],
+
+		].forEach( function(item) {
+
+			it( 
+				'uses the correct escaping in ' + item[0] + ' files', 
+				runTest.bind( null, item[1], item[2], item[3] )
+			);
+
+		} );
+
+		it( 'accepts a custom placeholder', function() {
+
+			var file = new File( {
+				contents: new Buffer( 
+					'some content ### "include.txt" ### some more content'
+				)
+			} );
+
+			var includeFile = new File( {
+				path: '/include.txt',
+				base: '/',
+				contents: new Buffer('replaced content')
+			} );
+
+			var includeStream = through( {objectMode:true} );
+			includeStream.end(includeFile);
+
+			var includer = tributary( includeStream, { placeholder: ['### ',' ###'] } );
+			includer.end(file);
+
+			return collect(includer)
+				.then( function(data) {
+					var file = data[0];
+
+					expect( file.isBuffer() ).toBe(true);
+					expect( file.contents.toString('utf8') )
+						.toBe( 'some content replaced content some more content' );
 				} );
+
+		} );
+
+		it( 'accepts a custom media type', function() {
+
+			var file = new File( {
+				contents: new Buffer( 
+					'some content /* include "include.txt" */ some more content'
+				),
+				path: 'file.htm'
+			} );
+
+			var includeFile = new File( {
+				path: '/include.txt',
+				base: '/',
+				contents: new Buffer('replaced content')
+			} );
+
+			var includeStream = through( {objectMode:true} );
+			includeStream.end(includeFile);
+
+			var includer = tributary( includeStream, { mediaType: 'application/javascript' } );
+			includer.end(file);
+
+			return collect(includer)
+				.then( function(data) {
+					var file = data[0];
+
+					expect( file.isBuffer() ).toBe(true);
+					expect( file.contents.toString('utf8') )
+						.toBe( 'some content replaced content some more content' );
+				} );
+
 		} );
 
 	} );
 
-});
+	describe( 'when a file is missing', function() {
+
+		it( 'generates an error', function(done) {
+
+			var file = new File( {
+				contents: new Buffer( 
+					'some content <!-- include "include.txt" --> some more content'
+				),
+				path: 'file.htm'
+			} );
+
+			var includeFile = new File( {
+				path: '/youcannotfindme.txt',
+				base: '/'
+			} );
+
+			var includeStream = through( {objectMode:true} );
+			includeStream.end(includeFile);
+
+			var includer = tributary( includeStream )
+				.on( 'error', function(e) {
+					expect( e ).toBeA( Error );
+					expect( e.message ).toBe( 'gulp-tributary: include.txt not found' );
+					done();
+				} );
+
+			includer.end(file);
+
+		} );
+
+		describe( 'if ignoreMissingFiles is true', function() {
+
+			it( 'does not generate an error', function() {
+
+				var file = new File( {
+					contents: new Buffer( 
+						'some content <!-- include "include.txt" --> some more content'
+					),
+					path: 'file.htm'
+				} );
+
+				var includeFile = new File( {
+					path: '/youcannotfindme.txt',
+					base: '/'
+				} );
+
+				var includeStream = through( {objectMode:true} );
+				includeStream.end(includeFile);
+
+				var includer = tributary( includeStream, { ignoreMissingFiles: true } );
+				includer.end(file);
+
+				return collect(includer)
+					.then( function(data) {
+						var file = data[0];
+
+						expect( file.isBuffer() ).toBe(true);
+						expect( file.contents.toString('utf8') )
+							.toBe( 'some content  some more content' );
+					} );
+				} );
+
+		} );
+
+	} );
+
+} );
