@@ -1,5 +1,5 @@
 {
-	"name": "gulp-include",
+	"name": "gulp-tributary",
 	"version": "1.0.1",
 	"description": "Gulp plugin to insert one file into another",
 	"main": "./index.js",
