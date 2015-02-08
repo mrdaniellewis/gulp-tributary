@@ -226,6 +226,37 @@ describe( 'gulp-tributary', function() {
 
 		} );
 
+		it( 'accepts a custom delimiter', function() {
+
+			var file = new File( {
+				contents: new Buffer( 
+					"some content <!-- include 'include.txt' --> some more content"
+				)
+			} );
+
+			var includeFile = new File( {
+				path: '/include.txt',
+				base: '/',
+				contents: new Buffer('replaced content')
+			} );
+
+			var includeStream = through( {objectMode:true} );
+			includeStream.end(includeFile);
+
+			var includer = tributary( includeStream, { delimiter: "'" } );
+			includer.end(file);
+
+			return collect(includer)
+				.then( function(data) {
+					var file = data[0];
+
+					expect( file.isBuffer() ).toBe(true);
+					expect( file.contents.toString('utf8') )
+						.toBe( 'some content replaced content some more content' );
+				} );
+
+		} );
+
 		it( 'accepts a custom media type', function() {
 
 			var file = new File( {

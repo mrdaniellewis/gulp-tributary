@@ -38,6 +38,7 @@ function include( includes, options ) {
     options = options || {};
     var forceMediaType = options.mediaType;
     var ignoreMissingFiles = options.ignoreMissingFiles === true;
+    var delimiter = options.delimiter;
     var files;
     if (includes ) {
         files = collect(includes);
@@ -76,7 +77,8 @@ function include( includes, options ) {
         var injector = new Tributary( {
             placeholderStart: placeholder[0],
             placeholderEnd: placeholder[1],
-            getStream: getStream
+            getStream: getStream,
+            delimiter: delimiter
         } );
         return injector;
     }

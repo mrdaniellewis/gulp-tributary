@@ -57,6 +57,7 @@ gulp.src('awesome-page.htm')
 * `options.mediaType` specify the media type of the files.  Used to choose the placeholder tags
 * `options.placeholder` an Array containing the start and end parts of the placeholder
 * `options.ignoreMissingFiles` Boolean, default = false, if true don't error if an included file cannot be found.
+* `options.delimiter` the delimiter to use around the filename.  Defaults to `"`
 
 ## Placeholders
 
