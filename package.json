@@ -1,6 +1,6 @@
 {
   "name": "gulp-tributary",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Gulp plugin to insert one file into another",
   "keywords": [
     "gulpplugin",
