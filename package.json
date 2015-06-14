@@ -1,8 +1,12 @@
 {
   "name": "gulp-tributary",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Gulp plugin to insert one file into another",
-  "keywords": ["gulpplugin","gulp","merge"],
+  "keywords": [
+    "gulpplugin",
+    "gulp",
+    "merge"
+  ],
   "main": "./index.js",
   "scripts": {
     "test": "mocha"
