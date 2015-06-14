@@ -2,6 +2,7 @@
   "name": "gulp-tributary",
   "version": "1.1.0",
   "description": "Gulp plugin to insert one file into another",
+  "keywords": ["gulpplugin","gulp","merge"],
   "main": "./index.js",
   "scripts": {
     "test": "mocha"
@@ -12,7 +13,8 @@
     "debug": "^2.1.1",
     "stream-collect": "^1.0.1",
     "tributary": "^1.1.0",
-    "promise-util": "^1.0.0"
+    "promise-polyfill": "*",
+    "promise-util": "^1.0.1"
   },
   "devDependencies": {
     "mocha": "^2.1.0",
