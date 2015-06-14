@@ -1,8 +1,13 @@
 /* jshint node:true */
+/* global Promise: false */
 "use strict";
 
 var through = require('through2');
-var Promise = require('promise-polyfill');
+
+if ( typeof Promise === 'undefined' ) {
+    global.Promise = require('promise-polyfill');
+}
+
 var mime = require('mime-types');
 var Tributary = require('tributary');
 var collect = require('stream-collect');
