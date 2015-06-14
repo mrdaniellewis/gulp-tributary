@@ -1,5 +1,7 @@
 # Gulp tributary
 
+[![npm version](https://badge.fury.io/js/gulp-js-escape.svg)](http://badge.fury.io/js/gulp-tributary)
+
 Includes one file inside another by replacing placeholders with a file.  Just like the `#include` directive of server side includes.
 
 There are several other Gulp plugins that also do this, the differece with this one are the included files are taken from a Gulp stream rather than directly from the file system.
